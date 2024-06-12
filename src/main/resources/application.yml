@@ -13,3 +13,9 @@ spring:
           format_sql: true
       database: postgresql
       database-platform: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    producer:
+      useNativeEncoding: true
+      bootstrap-servers: localhost:9092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.example.carservice.kafka.EventSerializer
