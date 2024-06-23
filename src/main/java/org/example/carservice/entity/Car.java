@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.authservice.entity.User;
 
 @Data
 @Builder
@@ -18,4 +19,7 @@ public class Car {
     @Column(unique = true)
     private String name;
     private double mileage;
+    @ManyToOne(targetEntity = User.class)
+    private User user;
+
 }

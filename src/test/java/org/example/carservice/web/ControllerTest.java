@@ -4,10 +4,14 @@ import org.example.carservice.Application;
 import org.example.carservice.PostgresContainer;
 import org.example.carservice.command.CreateCarCommand;
 import org.example.carservice.dto.CarResponse;
+import org.example.carservice.utils.FakeAuthService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.test.context.ContextConfiguration;
 
 import java.io.IOException;
@@ -20,6 +24,8 @@ public class ControllerTest {
     @Autowired
     TestRestTemplate testRestTemplate;
 
+    @Autowired
+    FakeAuthService fakeAuthService;
 
     private static final PostgresContainer container = new PostgresContainer();
 
@@ -41,16 +47,24 @@ public class ControllerTest {
     @Test
     void shouldCreateCar(){
         // given
+        String jwt = createUser("test-email");
         var createCarCommand = CreateCarCommand.builder()
                 .name("test-name")
                 .mileage(1000000)
                 .build();
 
         // when
-        createCar(createCarCommand);
+        createCar(createCarCommand, jwt);
 
         // then
         shouldCreateCarInDatabase("test-name", 1000000.0);
+    }
+
+    private String createUser(String email) {
+        String jwt = fakeAuthService.createUser(email);
+        var users = container.executeQueryForObjects("select * from _user");
+        Assertions.assertFalse(users.isEmpty());
+        return jwt;
     }
 
     @Test
@@ -61,7 +75,7 @@ public class ControllerTest {
                 .mileage(1000)
                 .build();
         // when
-        createCar(createCarCommand);
+        createCar(createCarCommand, "");
 
         // then
         shouldCreateCarInDatabase("test-name", 1000);
@@ -79,7 +93,7 @@ public class ControllerTest {
                 .mileage(1000)
                 .build();
         // when
-        createCar(createCarCommand);
+        createCar(createCarCommand, "");
 
         // then
         shouldFindSingleCar("test-name");
@@ -91,8 +105,12 @@ public class ControllerTest {
         Assertions.assertEquals(carName, carResponse.getName());
     }
 
-    private CarResponse createCar(CreateCarCommand createCarCommand){
-        var response = testRestTemplate.postForEntity("/api/v1/car", createCarCommand, CarResponse.class);
+    private CarResponse createCar(CreateCarCommand createCarCommand, String token){
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Authorization","Bearer " + token);
+        HttpEntity<CreateCarCommand> httpEntity = new HttpEntity<>(createCarCommand, headers);
+        var response = testRestTemplate.exchange("/api/v1/car", HttpMethod.POST,
+                httpEntity, CarResponse.class);
         Assertions.assertTrue(response.getStatusCode().is2xxSuccessful());
         return response.getBody();
     }

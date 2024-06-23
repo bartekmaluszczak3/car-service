@@ -1,6 +1,7 @@
 package org.example.carservice.handler;
 
 import lombok.SneakyThrows;
+import org.example.authservice.entity.User;
 import org.example.carservice.command.CreateCarCommand;
 import org.example.carservice.command.DeleteCarCommand;
 import org.example.carservice.dto.CarResponse;
@@ -10,6 +11,8 @@ import org.example.carservice.kafka.EventProducer;
 import org.example.carservice.repository.CarRepository;
 import org.example.events.events.Event;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -27,13 +30,16 @@ public class CommandCarHandler {
 
     @SneakyThrows
     public CarResponse createCar(CreateCarCommand createCarCommand){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User)authentication.getPrincipal();
         Car car = Car.builder()
                 .name(createCarCommand.getName())
                 .mileage(createCarCommand.getMileage())
+                .user(user)
                 .build();
         carRepository.save(car);
         Event event = EventCreator.createCarEvent(createCarCommand);
-        eventProducer.sendCreateCarEvent(event);
+//        eventProducer.sendCreateCarEvent(event);
         return carResponseFromEntity(car);
     }
 
